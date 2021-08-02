@@ -4,6 +4,10 @@ var url = require('url');
 var qs = require('querystring');
 var template = require('./lib/template.js');
 //객체화 완료 refactoring
+var path = require('path');
+var sanitizeHtml = require('sanitize-html'); 
+const sanitize = require('sanitize-html');
+//출력 보안을 위한 라이브러리 인듯.
 
 
 
@@ -27,16 +31,19 @@ var app = http.createServer(function(request,response){
 
       } else{
       fs.readdir('./data', function(error, filelist){
-        fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
+        var filteredId = path.parse(queryData.id).base; // .. root 을 제외한 경로를 내뱉도록 함. parse중에 base에 해당한게 그런듯
+        fs.readFile(`data/${filteredId}`, 'utf8', function(err, description){
           var title = queryData.id;
+          var sanitizedTitle = sanitizeHtml(title);
+          var sanitizeDescription = sanitizeHtml(description);// sanitize 함수로 출력 소독함. 출력 보안을 위해.
           var list = template.List(filelist);
           //delete의 경우 이를 링크로 처리할경우 보안문제 발생함. 따라서 post 방식으로 변경해야됨 
-          var html = template.HTML(title, list, `<h2>${title}</h2>${description}`, 
+          var html = template.HTML(sanitizedTitle, list, `<h2>${sanitizedTitle}</h2>${sanitizeDescription}`, 
           `
           <a href="/create">create</a> 
-          <a href="/update?id=${title}">update</a>
+          <a href="/update?id=${sanitizedTitle}">update</a>
           <form action="delete_process" method="post">
-            <input type="hidden" name="id" value="${title}">
+            <input type="hidden" name="id" value="${sanitizedTitle}">
             <input type="submit" value = "delete">
           </form>
           `);
@@ -84,7 +91,8 @@ var app = http.createServer(function(request,response){
       
     }else if(pathname === '/update'){
       fs.readdir('./data', function(error, filelist){
-        fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
+        var filteredId = path.parse(queryData.id).base;
+        fs.readFile(`data/${filteredId}`, 'utf8', function(err, description){
           var title = queryData.id;
           var list = template.List(filelist);
           var html = template.HTML(title, list, 
@@ -117,10 +125,11 @@ var app = http.createServer(function(request,response){
       request.on('end', function(){
         var post = qs.parse(body);
         var id = post.id;
+        var filteredId = path.parse(id).base; // 루트 경로 거르고 접근할 수 있도록.
         var title = post.title;
         var description = post.description;
         //rename을 통해 파일명 변경, 전칸을 후칸로 바꾸라는 뜻임.
-        fs.rename(`data/${id}`, `data/${title}`, function(error){
+        fs.rename(`data/${filteredId}`, `data/${title}`, function(error){
           fs.writeFile(`data/${title}`, description, 'utf8', function(err){
             response.writeHead(302, {Location: `/?id=${title}`}); //writeHead 302는 다른곳으로 redirection 하라는 뜻.
             response.end('success');
@@ -135,8 +144,9 @@ var app = http.createServer(function(request,response){
       request.on('end', function(){
         var post = qs.parse(body);
         var id = post.id;
+        var filteredId = path.parse(id).base; // 루트 경로 거르고 접근할 수 있도록.
         //삭제하는 방법 , unlink
-        fs.unlink(`data/${id}`, function(error){
+        fs.unlink(`data/${filteredId}`, function(error){
           response.writeHead(302, {Location: `/`}); //writeHead 302는 다른곳으로 redirection 하라는 뜻.
           response.end();
         });
