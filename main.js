@@ -7,6 +7,16 @@ var template = require('./lib/template.js');
 var path = require('path');
 var sanitizeHtml = require('sanitize-html'); 
 const sanitize = require('sanitize-html');
+var mysql = require('mysql');
+
+var DB = mysql.createConnection({
+  host    : 'localhost',
+  user    : 'root',
+  password: 'tatamo4532',
+  database: 'opentutorials',
+});
+
+DB.connect;
 //출력 보안을 위한 라이브러리 인듯.
 
 
@@ -18,16 +28,28 @@ var app = http.createServer(function(request,response){
     if(pathname === '/'){
       if(queryData.id == undefined){
 
-        fs.readdir('./data', function(error, filelist){
+        // fs.readdir('./data', function(error, filelist){
 
+        //   var title = 'Welcome';
+        //   var description = 'Hello, Node.js';
+
+        //   var list = template.List(filelist);
+        //   var html = template.HTML(title, list, `<h2>${title}</h2>${description}`, `<a href="/create">create</a>`);
+        //   response.end(html);
+        //   response.writeHead(200);
+        // });
+
+        //두번째 인자 topics에서 결과가 담기도록 약속되어있음.
+        DB.query(`SELECT * FROM topic`, function(error, topics, fields){
+          console.log(topics);
           var title = 'Welcome';
           var description = 'Hello, Node.js';
-
-          var list = template.List(filelist);
+          var list = template.List(topics);
           var html = template.HTML(title, list, `<h2>${title}</h2>${description}`, `<a href="/create">create</a>`);
-          response.end(html);
           response.writeHead(200);
+          response.end(html);
         });
+
 
       } else{
       fs.readdir('./data', function(error, filelist){
